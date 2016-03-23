@@ -1,0 +1,25 @@
+{
+  "name": "xxx_server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "async": "^2.0.0-rc.1",
+    "fluent-ffmpeg": "^2.0.1",
+    "fs": "0.0.2",
+    "hat": "0.0.3",
+    "lodash": "^4.6.1",
+    "path": "^0.12.7",
+    "progress-stream": "^1.2.0",
+    "request": "^2.69.0",
+    "request-progress": "^2.0.1",
+    "uuid": "^2.0.1",
+    "vantage": "^1.5.2",
+    "x-ray": "^2.0.3"
+  }
+}
