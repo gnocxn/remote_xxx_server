@@ -4,10 +4,11 @@ var xvideos = require('./xvideos');
 var async = require('async');
 var _ = require('lodash');
 vantage
-    .command("porncom [link]")
+    .command("porncom <link>")
     .description("Grab link at porn.com")
     .option('-q --quality [nbr]', 'Choose <nbr> quality for download')
     .action(function (args, callback) {
+		//console.log(args)
         var href = args.link,
             quality = args.options.quality;
         async.waterfall([
@@ -42,10 +43,25 @@ vantage
 vantage
 	.command('xvideos')
 	.description('XVIDEOS tools...')
-	.option('-l,--login <username><password>', 'Login before upload....')
+	.option('-l,--login <authenticate>', 'Login before upload....')
+	.option('-u,--upload <videoId>', 'Upload by video Id....')
 	.action(function (args, callback){
-		console.log(args)
-		callback()
+		if(args.options.login){
+			var authenticate = args.options.login.split(','),
+				username = authenticate[0],
+				password = authenticate[1]
+
+			xvideos.LOGIN(username, password, function(err, req){
+				//console.log(err,body, httpResponse);
+				callback()
+			})
+		}else if(args.options.upload){
+			var videoId = args.options.upload;
+			xvideos.UPLOAD(function(err,data){
+				console.log(err, data);
+				callback();
+			});
+		}
 	})
 
 vantage
