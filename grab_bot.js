@@ -170,7 +170,6 @@ function getFilename(title, prefix) {
     filename += '-' + hat() + prefix + '.mp4';
     return filename;
 }
-
 function simulatorProgress(){
     return _.repeat('.', _.random(1,10));
 }
