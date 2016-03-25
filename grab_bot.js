@@ -24,7 +24,8 @@ module.exports = {
                     title: '.main h1@text',
                     description: 'meta[name="description"]@content',
                     script: 'head',
-                    tags: ['p.categories > a@text']
+                    categories: ['p.categories > a@text'],
+                    tags: ['p.tags > a@text']
                 })
                 (function (err, data) {
                     if (err) {
@@ -142,7 +143,9 @@ module.exports = {
                     console.log('files have been merged succesfully');
                     fs.unlinkSync(video.filename);
                     fs.unlinkSync(video.promotion);
-		            var xvideos_tags = _.chain(video.tags).map(function(t){return _.words(t).join('-')}).join(' ').value();
+		            var _categories = _.chain(video.categories).map(function(t){return _.words(t.toLowerCase()).join('-')}).value();
+		            var _tags = _.chain(video.tags).map(function(t){return _.words(t.toLowerCase()).join('-')}).value();
+                    var xvideos_tags = _.uniq(_.union(_categories,_tags)).join(' ');
                     video = _.omit(video, 'promotion');
                     video = _.extend(video, {filename : outputFile, xvideos_tags : xvideos_tags});
                     cb(null, video);
