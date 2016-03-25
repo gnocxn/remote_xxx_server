@@ -9,12 +9,6 @@ module.exports = {
 	LOGIN: function (email, password, cb) {
 		if (!email || !password) return;
 		var bodyTlp = _.template('referer=<%=referer%>&login=<%=email%>&password=<%=password%>&log=');
-		/*var formData = {
-		 referer: 'http://www.xvideos.com/profiles/cafe4taipei/',
-		 login: email,
-		 password: password,
-		 log : null
-		 }*/
 
 		var headers = {
 			'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
@@ -45,19 +39,29 @@ module.exports = {
 			}
 		});
 	},
-	UPLOAD: function (cb) {
+	UPLOAD: function (filename, cookie, cb) {
 		var uploadUrl = 'http://upload.xvideos.com/account/uploads/new';
+		var cookie = login_cookie || cookie;
 		var options = {
 			url : uploadUrl,
 			headers : {
 				'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
-				'Cookie' : login_cookie
+				'Cookie' : cookie
 			},
 			method : 'GET'
 		}
-		request(options, function(e, r, b){
-			console.log(b);
-			cb();
+		async.waterfall([
+			function(cb1){
+				request(options, function(e, r, b){
+					var x = Xray();
+					x(b,'#progress_key@value')(function(error, data){
+						cb1(error, data);
+					})
+				})
+			}
+		],function(error, result){
+			cb(error, result);
 		})
+
 	}
 }

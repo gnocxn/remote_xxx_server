@@ -21,7 +21,7 @@ module.exports = {
                 var x = Xray();
                 x(link, {
                     id : 'div.rStatic.player@data-id',
-                    title: 'title',
+                    title: '.main h1@text',
                     description: 'meta[name="description"]@content',
                     script: 'head',
                     tags: ['p.categories > a@text']
@@ -31,7 +31,7 @@ module.exports = {
                         cb1(err);
                     }
                     if (data) {
-                        cb1(null, _.extend(data,{source : 'porn.com'}));
+                        cb1(null, _.extend(data,{source : 'porn.com', originalLink : link}));
                     }
                 })
             },
@@ -71,7 +71,9 @@ module.exports = {
             writeStream.on('close', function () {
                 //console.log('++ SAVED FILE : ', filename);
                 console.log('\nDownload successfully');
-                cb(null, _.extend(video, {filename: filename}));
+                video = _.omit(video, 'streams');
+	            video = _.extend(video,{filename: filename})
+                cb(null, video);
             });
             requestProgress(request(stream.url, {encoding: null}), {
                 delay: 500
@@ -140,8 +142,9 @@ module.exports = {
                     console.log('files have been merged succesfully');
                     fs.unlinkSync(video.filename);
                     fs.unlinkSync(video.promotion);
+		            var xvideos_tags = _.chain(video.tags).map(function(t){return _.words(t).join('-')}).join(' ').value();
                     video = _.omit(video, 'promotion');
-                    video = _.extend(video, {filename : outputFile});
+                    video = _.extend(video, {filename : outputFile, xvideos_tags : xvideos_tags});
                     cb(null, video);
                 })
                 .on('progress', function (progress) {
@@ -153,7 +156,7 @@ module.exports = {
                 .on('error', function (err) {
                     console.log('an error happened: ' + err.message);
                 })
-                .mergeToFile(outputFile)
+                .mergeToFile(outputFile, path.resolve('/tmp/'))
         }
     }
 }
