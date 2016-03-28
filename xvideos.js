@@ -73,102 +73,110 @@ module.exports = {
 				if (!APC_UPLOAD_PROGRESS) {
 					cb2(null, null)
 				} else {
-					try {
-						var j = request.jar()
-						//var headers = _.clone(headers);
-						headers = _.extend(headers, {
-							'content-type': 'multipart/form-data'
-						});
-						var progressTlp = _.template('http://upload.xvideos.com/account/uploads/progress?upload_id=<%=progressId%>&basic_upload=1')
-						var progressUrl = progressTlp({progressId: APC_UPLOAD_PROGRESS});
-						var stats = fs.statSync(video.filename);
-						var totalSize = pretty(stats['size'], true, true);
-						var readStream = fs.createReadStream(video.filename);
-						//var options = _.clone(options);
-						var options = {
-							url: submitAction,
-							headers: headers,
-							method: 'POST',
-							formData: {
-								APC_UPLOAD_PROGRESS: APC_UPLOAD_PROGRESS,
-								message: '',
-								tags: video.xvideos_tags,
-								upload_file: readStream
-							},
-							jar: j
-						}
-						console.log(msg.Success('Begin upload...'));
-						request(options, function (e, r, b) {
-							if (e) {
-								console.log(msg.Error(e), options);
-							} else {
-								if(r.statusCode === 302){
-									var comit = r.headers['location'];
-									//console.log(msg.Warning(comit) + '\n');
-									var cookie = j.getCookieString('http://www.xvideos.com');
-									headers = _.omit(headers, 'content-type');
-									//console.log('COMIT',comit);
-									if (!comit) {
-										var x = Xray();
-										x(b, {
-											success: 'p.inlineOK a@href',
-											error: 'p.inlineError'
-										})(function (error, data) {
-											console.log(data);
-											cb2(error, {
-												comit: (data.success) ? data.success : null,
-												cookie: cookie
-											});
-										})
-									} else {
-										cb2(null, {
-											comit: comit,
+					var j = request.jar()
+					//var headers = _.clone(headers);
+					headers = _.extend(headers, {
+						'content-type': 'multipart/form-data'
+					});
+					var progressTlp = _.template('http://upload.xvideos.com/account/uploads/progress?upload_id=<%=progressId%>&basic_upload=1')
+					var progressUrl = progressTlp({progressId: APC_UPLOAD_PROGRESS});
+					var stats = fs.statSync(video.filename);
+					var totalSize = pretty(stats['size'], true, true);
+					var readStream = fs.createReadStream(video.filename);
+					//var options = _.clone(options);
+					var options = {
+						url: submitAction,
+						headers: headers,
+						method: 'POST',
+						formData: {
+							APC_UPLOAD_PROGRESS: APC_UPLOAD_PROGRESS,
+							message: '',
+							tags: video.xvideos_tags,
+							upload_file: readStream
+						},
+						jar: j
+					}
+					console.log(msg.Success('Begin upload...'));
+					request(options, function (e, r, b) {
+						if (e) {
+							console.log(msg.Error(e), options);
+						} else {
+							if(r.statusCode === 302){
+								var comit = r.headers['location'];
+								//console.log(msg.Warning(comit) + '\n');
+								var cookie = j.getCookieString('http://www.xvideos.com');
+								headers = _.omit(headers, 'content-type');
+								//console.log('COMIT',comit);
+								if (!comit) {
+									var x = Xray();
+									x(b, {
+										success: 'p.inlineOK a@href',
+										error: 'p.inlineError'
+									})(function (error, data) {
+										console.log(data);
+										cb2(error, {
+											comit: (data.success) ? data.success : null,
 											cookie: cookie
 										});
-									}
+									})
+								} else {
+                                    console.log(msg.Warning('\nWait 15 second before comit...'));
+									setTimeout(function(){
+                                        cb2(null, {
+                                            comit: comit,
+                                            cookie: cookie
+                                        });
+                                    },15000)
 								}
 							}
-						});
+						}
+					});
+                    var current = 0;
+                    readStream.on('data',function(data){
+                        current += data.length;
+                        var str = 'Uploaded ' + pretty(current, true, true) + '/' + totalSize;
+                        process.stdout.clearLine();
+                        process.stdout.cursorTo(0);
+                        process.stdout.write(msg.Warning(str));
+                    });
 
-						function progress(done) {
-							if (done == 1) {
-								return;
+					/*function progress(done) {
+						if (done == 1) {
+							return;
+						}
+						var options = {
+							url : progressUrl,
+							headers: {
+								'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
+								'Cookie': cookie
 							}
-							var options = {
-								headers: {
-									'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
-									'Cookie': cookie
-								}
-							}
-
-							needle.get(progressUrl, options, function (e, r) {
-								if (e) {
-									console.log(msg.Error(e.toString()));
-								}
-								if (r.statusCode == 200) {
-									var done = 0;
-									//if(b !== '[]')
-									var obj = JSON.parse(r.body);
-									//console.log(obj, _.isArray(obj));
-									if (!_.isArray(obj)) {
-										var current = pretty(obj.current, true, true);
-										var total = pretty(obj.total, true, true);
-										var str = 'Uploaded... ' + current + '/' + total;
-										done = obj.done;
-										process.stdout.clearLine();
-										process.stdout.cursorTo(0);
-										process.stdout.write(msg.Warning(str));
-									}
-									progress(done);
-								}
-							});
 						}
 
-						progress(0);
-
-					} catch (ex) {
-						console.log(ex);
+						request.get(options, function (e, r) {
+							if (e) {
+								console.log(msg.Error(e.toString()));
+							}
+							if (r.statusCode == 200) {
+								var done = 0;
+								//if(b !== '[]')
+								var obj = JSON.parse(r.body);
+								//console.log(obj, _.isArray(obj));
+								if (!_.isArray(obj)) {
+									var current = pretty(obj.current, true, true);
+									var total = pretty(obj.total, true, true);
+									var str = 'Uploaded... ' + current + '/' + total;
+									done = obj.done;
+									process.stdout.clearLine();
+									process.stdout.cursorTo(0);
+									process.stdout.write(msg.Warning(str));
+								}
+								progress(done);
+							}
+						});
 					}
+
+					progress(0);*/
+
 
 				}
 
