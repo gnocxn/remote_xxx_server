@@ -20,7 +20,7 @@ module.exports = {
             function (cb1) {
                 var x = Xray();
                 x(link, {
-                    id : 'div.rStatic.player@data-id',
+                    id: 'div.rStatic.player@data-id',
                     title: '.main h1@text',
                     description: 'meta[name="description"]@content',
                     script: 'head',
@@ -32,7 +32,7 @@ module.exports = {
                         cb1(err);
                     }
                     if (data) {
-                        cb1(null, _.extend(data,{source : 'porn.com', originalLink : link}));
+                        cb1(null, _.extend(data, {source: 'porn.com', originalLink: link}));
                     }
                 })
             },
@@ -73,7 +73,7 @@ module.exports = {
                 //console.log('++ SAVED FILE : ', filename);
                 console.log('\nDownload successfully');
                 video = _.omit(video, 'streams');
-	            video = _.extend(video,{filename: filename})
+                video = _.extend(video, {filename: filename})
                 cb(null, video);
             });
             requestProgress(request(stream.url, {encoding: null}), {
@@ -81,18 +81,29 @@ module.exports = {
             }).on('progress', function (state) {
                 process.stdout.clearLine();
                 process.stdout.cursorTo(0);
-                process.stdout.write('Download : ' + Math.round((state.percentage * 100)+1) + '%');
+                process.stdout.write('Download : ' + Math.round((state.percentage * 100) + 1) + '%');
             }).pipe(writeStream);
         } catch (ex) {
             console.log(ex);
             throw new ex;
         }
     },
-    CREATE_PROMOTION : function(video, cb){
+    GET_METADATA: function (video, cb) {
+        new ffmpeg.ffprobe(video.filename, function (error, data) {
+            if (error) cb(error, null);
+            if (data) {
+                var meta = _.get(data, 'streams[0]');
+                var obj = _.pick(meta, ['width', 'height', 'coded_width', 'coded_height']);
+                var size = obj.coded_width + 'x' + obj.coded_height;
+                cb(null, _.extend(video, {codedSize: size}));
+            }
+        })
+    },
+    CREATE_PROMOTION: function (video, cb) {
         var outputPromotionFile = path.join(path.resolve('/tmp/'), hat() + '_PROMOTION.mp4');
         new ffmpeg(promotionImage)
             .loop(15)
-            .size('640x480')
+            .size(video.codedSize || '640x480')
             .input(promotionSound)
             .output(outputPromotionFile)
             .on('end', function () {
@@ -143,11 +154,15 @@ module.exports = {
                     console.log('files have been merged succesfully');
                     fs.unlinkSync(video.filename);
                     fs.unlinkSync(video.promotion);
-		            var _categories = _.chain(video.categories).map(function(t){return _.words(t.toLowerCase()).join('-')}).value();
-		            var _tags = _.chain(video.tags).map(function(t){return _.words(t.toLowerCase()).join('-')}).value();
-                    var xvideos_tags = _.uniq(_.union(_categories,_tags)).join(' ');
+                    var _categories = _.chain(video.categories).map(function (t) {
+                        return _.words(t.toLowerCase()).join('-')
+                    }).value();
+                    var _tags = _.chain(video.tags).map(function (t) {
+                        return _.words(t.toLowerCase()).join('-')
+                    }).value();
+                    var xvideos_tags = _.uniq(_.union(_categories, _tags)).join(' ');
                     video = _.omit(video, 'promotion');
-                    video = _.extend(video, {filename : outputFile, xvideos_tags : xvideos_tags});
+                    video = _.extend(video, {filename: outputFile, xvideos_tags: xvideos_tags});
                     cb(null, video);
                 })
                 .on('progress', function (progress) {
@@ -170,6 +185,6 @@ function getFilename(title, prefix) {
     filename += '-' + hat() + prefix + '.mp4';
     return filename;
 }
-function simulatorProgress(){
-    return _.repeat('.', _.random(1,10));
+function simulatorProgress() {
+    return _.repeat('.', _.random(1, 10));
 }

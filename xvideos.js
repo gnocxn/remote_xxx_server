@@ -99,7 +99,7 @@ module.exports = {
 							if (e) {
 								console.log(msg.Error(e), options);
 							} else {
-								//console.log(b);
+								console.log(b);
 								var cookie = j.getCookieString('http://www.xvideos.com');
 								var x = Xray();
 								x(b, 'p.inlineOK a@href')(function (error, data) {
@@ -143,11 +143,12 @@ module.exports = {
 					headers: headers,
 					jar: j
 				}
-				//console.log(options);
+				console.log(options);
 				request(options, function (e, r, b) {
 					if (e) {
 						console.log(msg.Error(e));
 					} else {
+                        console.log(b);
 						var cookie = j.getCookieString('http://www.xvideos.com');
 						var x = Xray();
 						x(b, {
@@ -185,6 +186,7 @@ module.exports = {
 								jar: j
 							}
 							request(options, function (e, r, b) {
+								console.log(b);
 								var cookie = j.getCookieString('http://www.xvideos.com');
 								cb1(e, cookie);
 							})
