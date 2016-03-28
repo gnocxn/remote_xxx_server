@@ -1,6 +1,7 @@
 var _ = require('lodash'),
 	async = require('async'),
 	request = require('request'),
+	needle = require('needle'),
 	Xray = require('x-ray'),
 	path = require('path'),
 	fs = require('fs'),
@@ -77,7 +78,9 @@ module.exports = {
 						//var headers = _.clone(headers);
 						headers = _.extend(headers, {
 							'content-type': 'multipart/form-data'
-						})
+						});
+						var progressTlp = _.template('http://upload.xvideos.com/account/uploads/progress?upload_id=<%=progressId%>&basic_upload=1')
+						var progressUrl = progressTlp({progressId: APC_UPLOAD_PROGRESS});
 						var stats = fs.statSync(video.filename);
 						var totalSize = pretty(stats['size'], true, true);
 						var readStream = fs.createReadStream(video.filename);
@@ -99,28 +102,78 @@ module.exports = {
 							if (e) {
 								console.log(msg.Error(e), options);
 							} else {
-								console.log(b);
+								var comit = r.headers['location'];
+								//console.log(comit, JSON.stringify(r));
 								var cookie = j.getCookieString('http://www.xvideos.com');
-								var x = Xray();
-								x(b, 'p.inlineOK a@href')(function (error, data) {
-									headers = _.omit(headers, 'content-type');
-									cb2(error, {
-										comit: data,
+								headers = _.omit(headers, 'content-type');
+								//console.log('COMIT',comit);
+								if (!comit) {
+									var x = Xray();
+									x(b, {
+										success: 'p.inlineOK a@href',
+										error: 'p.inlineError'
+									})(function (error, data) {
+										cb2(error, {
+											comit: (data.success) ? data.success : null,
+											cookie: cookie
+										});
+									})
+								} else {
+									cb2(null, {
+										comit: comit,
 										cookie: cookie
 									});
-								})
+								}
+
 							}
 						});
-						var uploaded = 0;
-						readStream.on('data', function (data) {
-							uploaded += data.length;
-							var str = 'Uploaded ' + pretty(uploaded, true, true) + '/' + totalSize + '...';
-							process.stdout.clearLine();
-							process.stdout.cursorTo(0);
-							process.stdout.write(msg.Warning(str));
-						}).on('end', function () {
-							console.log(msg.Success('\nUpload successfully.'));
-						});
+						/*var uploaded = 0;
+						 readStream.on('data', function (data) {
+						 uploaded += data.length;
+						 var str = 'Uploaded ' + pretty(uploaded, true, true) + '/' + totalSize + '...';
+						 process.stdout.clearLine();
+						 process.stdout.cursorTo(0);
+						 process.stdout.write(msg.Warning(str));
+						 }).on('end', function () {
+						 console.log(msg.Success('\nUpload successfully.'));
+						 });*/
+
+						function progress(done) {
+							if (done == 1) {
+								return;
+							}
+							var options = {
+								headers: {
+									'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
+									'Cookie': cookie
+								}
+							}
+
+							needle.get(progressUrl, options, function (e, r) {
+								if (e) {
+									console.log(msg.Error(e.toString()));
+								}
+								if (r.statusCode == 200) {
+									var done = 0;
+									//if(b !== '[]')
+									var obj = JSON.parse(r.body);
+									//console.log(obj, _.isArray(obj));
+									if (!_.isArray(obj)) {
+										var current = pretty(obj.current, true, true);
+										var total = pretty(obj.total, true, true);
+										var str = 'Uploaded... ' + current + '/' + total;
+										done = obj.done;
+										process.stdout.clearLine();
+										process.stdout.cursorTo(0);
+										process.stdout.write(msg.Warning(str));
+									}
+									progress(done);
+								}
+							});
+						}
+
+						progress(0);
+
 					} catch (ex) {
 						console.log(ex);
 					}
@@ -143,12 +196,12 @@ module.exports = {
 					headers: headers,
 					jar: j
 				}
-				console.log(options);
+				//console.log(options);
 				request(options, function (e, r, b) {
 					if (e) {
 						console.log(msg.Error(e));
 					} else {
-                        console.log(b);
+						//console.log(b);
 						var cookie = j.getCookieString('http://www.xvideos.com');
 						var x = Xray();
 						x(b, {
@@ -160,7 +213,7 @@ module.exports = {
 							}
 							if (data) {
 								if (data.status === 'Uploaded video saved !') {
-									console.log(msg.Success(data.status));
+									console.log('\n' + msg.Success(data.status));
 									var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
 									cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
 								} else {
@@ -186,7 +239,7 @@ module.exports = {
 								jar: j
 							}
 							request(options, function (e, r, b) {
-								console.log(b);
+								//console.log(b);
 								var cookie = j.getCookieString('http://www.xvideos.com');
 								cb1(e, cookie);
 							})
@@ -209,7 +262,13 @@ module.exports = {
 								}
 							}
 							request(options, function (e, r, b) {
-								cb2(e, obj.editLink);
+								var result = r.headers['location'];
+								//console.log(result);
+								headers = _.omit(headers, 'content-type');
+								cb2(e, {
+									editLink: obj.editLink,
+									msgLink: result
+								});
 							})
 						}
 					],
@@ -217,6 +276,23 @@ module.exports = {
 						cb4(error, result);
 					})
 
+			},
+			function (obj, cb5) {
+				var options = {
+					url: obj.msgLink,
+					method: 'GET',
+					headers: headers
+				}
+
+				request(options, function (e, r, b) {
+					if(b){
+						var x = Xray();
+						x(b, 'p.inlineOK')(function (error, data) {
+							console.log(msg.Success(data));
+						})
+					}
+					cb5(null, obj.editLink);
+				})
 			}
 		], function (error, result) {
 			if (error) {

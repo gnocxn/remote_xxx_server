@@ -14,6 +14,10 @@ var defautlDIR = '/tmp';
 var promotionVideo = path.join(path.resolve('./'), 'promotion.mp4');
 var promotionImage = path.join(path.resolve('./'), 'promotion.png');
 var promotionSound = path.join(path.resolve('./'), 'promotion.mp3');
+
+var exec = require('child_process').exec;
+
+
 module.exports = {
     PORNCOM: function (link, cb) {
         async.waterfall([
@@ -45,8 +49,15 @@ module.exports = {
                             url: s.url
                         }
                     });
+	                var _categories = _.chain(video.categories).map(function (t) {
+		                return _.words(t.toLowerCase()).join('-')
+	                }).value();
+	                var _tags = _.chain(video.tags).map(function (t) {
+		                return _.words(t.toLowerCase()).join('-')
+	                }).value();
+	                var xvideos_tags = _.uniq(_.union(_categories, _tags)).join(' ');
                     video = _.omit(video, 'script');
-                    video = _.extend(video, {streams: streams});
+                    video = _.extend(video, {streams: streams, xvideos_tags: xvideos_tags});
                     console.log('Get Info Successfully');
                     cb2(null, video);
                 } else {
@@ -154,15 +165,15 @@ module.exports = {
                     console.log('files have been merged succesfully');
                     fs.unlinkSync(video.filename);
                     fs.unlinkSync(video.promotion);
-                    var _categories = _.chain(video.categories).map(function (t) {
+/*                    var _categories = _.chain(video.categories).map(function (t) {
                         return _.words(t.toLowerCase()).join('-')
                     }).value();
                     var _tags = _.chain(video.tags).map(function (t) {
                         return _.words(t.toLowerCase()).join('-')
                     }).value();
-                    var xvideos_tags = _.uniq(_.union(_categories, _tags)).join(' ');
+                    var xvideos_tags = _.uniq(_.union(_categories, _tags)).join(' ');*/
                     video = _.omit(video, 'promotion');
-                    video = _.extend(video, {filename: outputFile, xvideos_tags: xvideos_tags});
+                    video = _.extend(video, {filename: outputFile});
                     cb(null, video);
                 })
                 .on('progress', function (progress) {
@@ -176,6 +187,34 @@ module.exports = {
                 })
                 .mergeToFile(outputFile, path.resolve('/tmp/'))
         }
+    },
+    SIMPLE_MERGE : function(video, cb){
+	    var inputFile = path.join(path.resolve(defautlDIR), hat()+'_INPUT.txt');
+	    var outputFile = path.join(path.resolve(defautlDIR), getFilename(video.title, 'final'));
+	    var fileTpl = _.template("file '<%=filename%>'\n");
+	    var cmdTpl = _.template("ffmpeg -f concat -i <%=input%> -c copy <%=output%>");
+	    var files = [video.promotion, video.filename];
+	    _.each(files, function(file){
+		    var str = fileTpl({filename : file});
+		    fs.appendFileSync(inputFile,str);
+	    });
+	    var cmd = cmdTpl({input : inputFile, output : outputFile});
+	    exec(cmd,{maxBuffer: 1024 * 500}, function(error, stdout, stderr) {
+		    //console.log('stdout: ' + stdout);
+		    //console.log('stderr: ' + stderr);
+		    if(stderr || stdout){
+			    console.log('files have been merged succesfully');
+			    fs.unlinkSync(video.filename);
+			    fs.unlinkSync(video.promotion);
+			    fs.unlinkSync(inputFile);
+			    video = _.omit(video, 'promotion');
+			    video = _.extend(video, {filename: outputFile});
+			    cb(null, video);
+		    }
+		    if (error !== null) {
+			    console.log('exec error: ' + error);
+		    }
+	    });
     }
 }
 
