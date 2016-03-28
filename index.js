@@ -7,7 +7,7 @@ var msg = require('./msg');
 
 const low = require('lowdb')
 const storage = require('lowdb/file-sync')
-const db = low('db.json', {storage});
+const db = low('db.json', {storage: storage});
 
 
 vantage
