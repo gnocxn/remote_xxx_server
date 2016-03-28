@@ -11,38 +11,62 @@ const db = low('db.json', {storage: storage});
 
 
 vantage
-	.command("porncom <link>")
-	.description("Grab link at porn.com")
-	.option('-q --quality [nbr]', 'Choose <nbr> quality for download')
+	.command("download <link>")
+	.description("Grab link at porn.com, xhamster.com")
 	.action(function (args, callback) {
 		//console.log(args)
 		try {
-			var href = args.link,
-				quality = args.options.quality;
+			var link = args.link;
+
+			function chooseGrabSite(link, cb) {
+				var sites = [
+					{
+						reg: /porn.com/,
+						index: 0
+					},
+					{
+						reg: /xhamster.com/,
+						index: 1
+					}
+				]
+				var site = _.find(sites, function (site) {
+					return site.reg.test(link)
+				});
+				switch (site.index) {
+					case 0:
+						grab.PORNCOM(link, cb);
+						break;
+					case 1:
+						grab.XHAMSTER(link, cb);
+						break;
+				}
+			}
+
 			async.waterfall([
 				function (cb1) {
-					grab.PORNCOM(href, cb1);
+					//grab.PORNCOM(href, cb1);
+					chooseGrabSite(link, cb1);
 				},
 				function (video, cb2) {
-					grab.DOWNLOAD(video, quality, cb2);
+					grab.DOWNLOAD(video, cb2);
 				},
-				function (video, cb2_1) {
-					grab.GET_METADATA(video, cb2_1);
-				},
+				/*function (video, cb2_1) {
+				 grab.GET_METADATA(video, cb2_1);
+				 },*/
 				function (video, cb34) {
-					if (!video.codedSize) callback();
-					grab.CREATE_PROMOTION(video, cb34);
-					/*async.parallel([
-					 function (cb3) {
-					 grab.RESIZE_TO(video, '640x480', cb3);
-					 },
-					 function (cb4) {
-					 grab.CREATE_PROMOTION(video, cb4);
-					 }
-					 ], function (error, result) {
-					 var _video = _.merge(result[0], result[1]);
-					 cb34(null, _video);
-					 })*/
+					//if (!video.codedSize) callback();
+					//grab.CREATE_PROMOTION(video, cb34);
+					async.parallel([
+						function (cb3) {
+							grab.RESIZE_TO(video, cb3);
+						},
+						function (cb4) {
+							grab.CREATE_PROMOTION(video, cb4);
+						}
+					], function (error, result) {
+						var _video = _.merge(result[0], result[1]);
+						cb34(null, _video);
+					})
 				},
 				function (video, cb5) {
 					//grab.ADD_PROMOTION(video, cb5);

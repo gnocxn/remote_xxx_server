@@ -102,41 +102,33 @@ module.exports = {
 							if (e) {
 								console.log(msg.Error(e), options);
 							} else {
-								var comit = r.headers['location'];
-								//console.log(comit, JSON.stringify(r));
-								var cookie = j.getCookieString('http://www.xvideos.com');
-								headers = _.omit(headers, 'content-type');
-								//console.log('COMIT',comit);
-								if (!comit) {
-									var x = Xray();
-									x(b, {
-										success: 'p.inlineOK a@href',
-										error: 'p.inlineError'
-									})(function (error, data) {
-										cb2(error, {
-											comit: (data.success) ? data.success : null,
+								if(r.statusCode === 302){
+									var comit = r.headers['location'];
+									//console.log(msg.Warning(comit) + '\n');
+									var cookie = j.getCookieString('http://www.xvideos.com');
+									headers = _.omit(headers, 'content-type');
+									//console.log('COMIT',comit);
+									if (!comit) {
+										var x = Xray();
+										x(b, {
+											success: 'p.inlineOK a@href',
+											error: 'p.inlineError'
+										})(function (error, data) {
+											console.log(data);
+											cb2(error, {
+												comit: (data.success) ? data.success : null,
+												cookie: cookie
+											});
+										})
+									} else {
+										cb2(null, {
+											comit: comit,
 											cookie: cookie
 										});
-									})
-								} else {
-									cb2(null, {
-										comit: comit,
-										cookie: cookie
-									});
+									}
 								}
-
 							}
 						});
-						/*var uploaded = 0;
-						 readStream.on('data', function (data) {
-						 uploaded += data.length;
-						 var str = 'Uploaded ' + pretty(uploaded, true, true) + '/' + totalSize + '...';
-						 process.stdout.clearLine();
-						 process.stdout.cursorTo(0);
-						 process.stdout.write(msg.Warning(str));
-						 }).on('end', function () {
-						 console.log(msg.Success('\nUpload successfully.'));
-						 });*/
 
 						function progress(done) {
 							if (done == 1) {
@@ -186,8 +178,12 @@ module.exports = {
 				//console.log(obj);
 				var comitUrl = 'http://upload.xvideos.com' + obj.comit;
 				//var headers = _.clone(headers);
+				console.log('\n'+comitUrl);
 				headers = _.extend(headers, {
-					'Cookie': obj.cookie
+					'Host' : 'upload.xvideos.com',
+					'Cookie': obj.cookie,
+					'Referer' : 'http://upload.xvideos.com/account/uploads/new',
+					'Upgrade-Insecure-Requests' : 1
 				});
 				var j = request.jar()
 				var options = {
@@ -197,32 +193,51 @@ module.exports = {
 					jar: j
 				}
 				//console.log(options);
-				request(options, function (e, r, b) {
-					if (e) {
-						console.log(msg.Error(e));
-					} else {
-						//console.log(b);
-						var cookie = j.getCookieString('http://www.xvideos.com');
-						var x = Xray();
-						x(b, {
-							status: 'span.ok@text',
-							editLink: 'a[target="_top"]@href'
-						})(function (error, data) {
-							if (error) {
-								throw error;
-							}
-							if (data) {
-								if (data.status === 'Uploaded video saved !') {
-									console.log('\n' + msg.Success(data.status));
-									var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
-									cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
-								} else {
-									cb3(null, null);
-								}
-							}
-						})
+				var _obj = {}
+				function waitForComit(status){
+					console.log(comitUrl);
+					console.log(msg.Warning(status));
+					if(status === 'Uploaded video saved !'){
+						cb3(null, _obj);
+						return;
 					}
-				});
+					request(options, function (e, r, b) {
+						if (e) {
+							console.log(msg.Error(e));
+						} else {
+							//console.log(b,r.statusCode);
+							var cookie = j.getCookieString('http://www.xvideos.com');
+							var x = Xray();
+							x(b, {
+								status: 'span.ok@text',
+								editLink: 'a[target="_top"]@href',
+								inlineError : 'p.inlineError'
+							})(function (error, data) {
+								if (error) {
+									throw error;
+								}
+								if (data) {
+									//waitForComit(data)
+									if(data.status){
+										var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
+										_obj = _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit});
+									}
+									var status = data.status || data.inlineError;
+									waitForComit(status);
+									/*if (data.status === 'Uploaded video saved !') {
+										console.log('\n' + msg.Success(data.status));
+										var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
+										cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
+									} else {
+										cb3(null, null);
+									}*/
+								}
+							})
+						}
+					});
+				}
+
+				waitForComit('Wait for video saved...');
 			},
 			function (obj, cb4) {
 				if (!obj.cookie || !obj.status || !obj.editLink) cb4(null, null);
