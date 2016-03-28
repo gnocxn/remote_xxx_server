@@ -290,6 +290,8 @@ module.exports = {
 						x(b, 'p.inlineOK')(function (error, data) {
 							console.log(msg.Success(data));
 						})
+					}else{
+						console.log(b);
 					}
 					cb5(null, obj.editLink);
 				})
