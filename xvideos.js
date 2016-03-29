@@ -44,6 +44,23 @@ module.exports = {
 			}
 		});
 	},
+	LOGIN2: function (email, password, cb) {
+		if (!email || !password) return;
+		var data = {
+			referer: 'http://www.xvideos.com/profiles/cafe4taipei/',
+			login: email,
+			password: password,
+			log: ''
+		};
+
+		needle.post('http://upload.xvideos.com/account/', data, function (e, r, b) {
+			if (!e && r.statusCode == 200 || r.statusCode == 302) {
+				var cookies = r.cookies;
+				console.log(cookies);
+				cb(null, cookies);
+			}
+		})
+	},
 	UPLOAD: function (video, cookie, cb) {
 		var uploadUrl = 'http://upload.xvideos.com/account/uploads/new';
 		var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
@@ -101,7 +118,7 @@ module.exports = {
 						if (e) {
 							console.log(msg.Error(e), options);
 						} else {
-							if(r.statusCode === 302){
+							if (r.statusCode === 302) {
 								var comit = r.headers['location'];
 								//console.log(msg.Warning(comit) + '\n');
 								var cookie = j.getCookieString('http://www.xvideos.com');
@@ -120,62 +137,64 @@ module.exports = {
 										});
 									})
 								} else {
-                                    console.log(msg.Warning('\nWait 15 second before comit...'));
-									setTimeout(function(){
-                                        cb2(null, {
-                                            comit: comit,
-                                            cookie: cookie
-                                        });
-                                    },15000)
+									console.log(msg.Warning('\nWait 15 second before comit...'));
+									setTimeout(function () {
+										cb2(null, {
+											comit: comit,
+											cookie: cookie
+										});
+									}, 15000)
 								}
 							}
 						}
 					});
-                    var current = 0;
-                    readStream.on('data',function(data){
-                        current += data.length;
-                        var str = 'Uploaded ' + pretty(current, true, true) + '/' + totalSize;
-                        process.stdout.clearLine();
-                        process.stdout.cursorTo(0);
-                        process.stdout.write(msg.Warning(str));
-                    });
+					setTimeout(function () {
+						var current = 0;
+						readStream.on('data', function (data) {
+							current += data.length;
+							var str = 'Uploaded ' + pretty(current, true, true) + '/' + totalSize;
+							process.stdout.clearLine();
+							process.stdout.cursorTo(0);
+							process.stdout.write(msg.Warning(str));
+						});
+					}, 1000)
 
 					/*function progress(done) {
-						if (done == 1) {
-							return;
-						}
-						var options = {
-							url : progressUrl,
-							headers: {
-								'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
-								'Cookie': cookie
-							}
-						}
+					 if (done == 1) {
+					 return;
+					 }
+					 var options = {
+					 url : progressUrl,
+					 headers: {
+					 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
+					 'Cookie': cookie
+					 }
+					 }
 
-						request.get(options, function (e, r) {
-							if (e) {
-								console.log(msg.Error(e.toString()));
-							}
-							if (r.statusCode == 200) {
-								var done = 0;
-								//if(b !== '[]')
-								var obj = JSON.parse(r.body);
-								//console.log(obj, _.isArray(obj));
-								if (!_.isArray(obj)) {
-									var current = pretty(obj.current, true, true);
-									var total = pretty(obj.total, true, true);
-									var str = 'Uploaded... ' + current + '/' + total;
-									done = obj.done;
-									process.stdout.clearLine();
-									process.stdout.cursorTo(0);
-									process.stdout.write(msg.Warning(str));
-								}
-								progress(done);
-							}
-						});
-					}
+					 request.get(options, function (e, r) {
+					 if (e) {
+					 console.log(msg.Error(e.toString()));
+					 }
+					 if (r.statusCode == 200) {
+					 var done = 0;
+					 //if(b !== '[]')
+					 var obj = JSON.parse(r.body);
+					 //console.log(obj, _.isArray(obj));
+					 if (!_.isArray(obj)) {
+					 var current = pretty(obj.current, true, true);
+					 var total = pretty(obj.total, true, true);
+					 var str = 'Uploaded... ' + current + '/' + total;
+					 done = obj.done;
+					 process.stdout.clearLine();
+					 process.stdout.cursorTo(0);
+					 process.stdout.write(msg.Warning(str));
+					 }
+					 progress(done);
+					 }
+					 });
+					 }
 
-					progress(0);*/
+					 progress(0);*/
 
 
 				}
@@ -186,12 +205,12 @@ module.exports = {
 				//console.log(obj);
 				var comitUrl = 'http://upload.xvideos.com' + obj.comit;
 				//var headers = _.clone(headers);
-				console.log('\n'+comitUrl);
+				//console.log('\n'+comitUrl);
 				headers = _.extend(headers, {
-					'Host' : 'upload.xvideos.com',
+					'Host': 'upload.xvideos.com',
 					'Cookie': obj.cookie,
-					'Referer' : 'http://upload.xvideos.com/account/uploads/new',
-					'Upgrade-Insecure-Requests' : 1
+					'Referer': 'http://upload.xvideos.com/account/uploads/new',
+					'Upgrade-Insecure-Requests': 1
 				});
 				var j = request.jar()
 				var options = {
@@ -202,10 +221,11 @@ module.exports = {
 				}
 				//console.log(options);
 				var _obj = {}
-				function waitForComit(status){
-					console.log(comitUrl);
+
+				function waitForComit(status) {
+					console.log('\n' + comitUrl);
 					console.log(msg.Warning(status));
-					if(status === 'Uploaded video saved !'){
+					if (status === 'Uploaded video saved !') {
 						cb3(null, _obj);
 						return;
 					}
@@ -219,26 +239,26 @@ module.exports = {
 							x(b, {
 								status: 'span.ok@text',
 								editLink: 'a[target="_top"]@href',
-								inlineError : 'p.inlineError'
+								inlineError: 'p.inlineError'
 							})(function (error, data) {
 								if (error) {
 									throw error;
 								}
 								if (data) {
 									//waitForComit(data)
-									if(data.status){
+									if (data.status) {
 										var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
 										_obj = _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit});
 									}
 									var status = data.status || data.inlineError;
 									waitForComit(status);
 									/*if (data.status === 'Uploaded video saved !') {
-										console.log('\n' + msg.Success(data.status));
-										var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
-										cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
-									} else {
-										cb3(null, null);
-									}*/
+									 console.log('\n' + msg.Success(data.status));
+									 var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
+									 cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
+									 } else {
+									 cb3(null, null);
+									 }*/
 								}
 							})
 						}
@@ -308,18 +328,56 @@ module.exports = {
 				}
 
 				request(options, function (e, r, b) {
-					if(b){
+					if (b) {
 						var x = Xray();
 						x(b, 'p.inlineOK')(function (error, data) {
 							console.log(msg.Success(data));
 						})
-					}else{
+					} else {
 						console.log(b);
 					}
 					cb5(null, obj.editLink);
 				})
 			}
 		], function (error, result) {
+			if (error) {
+				console.log(msg.Error(error))
+			} else {
+				if (result) {
+					console.log(msg.Warning(result));
+				}
+				console.log(msg.Success('Done!!!'));
+				cb(null, result);
+			}
+		})
+	},
+	UPLOAD2 : function(video, cookies, cb){
+		var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
+		//var cookie = login_cookie || cookies;
+		async.waterfall([
+			function(cb1){
+				var uploadUrl = 'http://upload.xvideos.com/account/uploads/new';
+				var headers = {
+					cookies : cookies
+				}
+				needle.get(uploadUrl, headers, function(e, r, b){
+					var x = Xray();
+					x(b, '#progress_key@value')(function (error, data) {
+						cb1(error, data);
+					})
+				})
+			},
+			function(APC_UPLOAD_PROGRESS, cb2){
+				if (!APC_UPLOAD_PROGRESS) {
+					cb2(null, null)
+				}else{
+					var stats = fs.statSync(video.filename);
+					var totalSize = pretty(stats['size'], true, true);
+					var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
+
+				}
+			}
+		], function(error, result){
 			if (error) {
 				console.log(msg.Error(error))
 			} else {

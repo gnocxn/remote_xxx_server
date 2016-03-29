@@ -101,17 +101,17 @@ vantage
                     username = authenticate[0],
                     password = authenticate[1]
 
-                xvideos.LOGIN(username, password, function (cookie) {
+                xvideos.LOGIN2(username, password, function (error,cookie) {
                     if (cookie) {
                         var user = db('users').find({username: username});
                         if (!user) {
                             db('users').push({
                                 username: username,
                                 password: password,
-                                cookie: cookie
+                                cookie: JSON.stringify(cookie)
                             });
                         } else {
-                            user.cookie = cookie;
+                            user.cookie = JSON.stringify(cookie);
                         }
                     }
                     callback()
@@ -120,12 +120,14 @@ vantage
                 var videoId = args.options.upload;
                 var defaultUser = 'cafe4taipei@gmail.com';
                 var user = db('users').find({username: defaultUser});
+                var cookie = JSON.parse(user.cookie);
                 var video = db('videos').find({id: videoId.toString()});
                 if (video) {
-                    xvideos.UPLOAD(video, user.cookie, function (err, data) {
+                    xvideos.UPLOAD2(video, cookie, function (err, data) {
                         //console.log(err, data);
-                        video = _.extend(video, {editLink: data});
-                        callback();
+                        /*video = _.extend(video, {editLink: data});
+                        callback();*/
+	                    callback();
                     });
                 } else {
                     console.log(msg.Error('Video not found!'))
