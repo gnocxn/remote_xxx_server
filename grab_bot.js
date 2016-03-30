@@ -244,7 +244,7 @@ module.exports = {
                 fs.unlinkSync(video.filename);
                 fs.unlinkSync(video.promotion);
                 fs.unlinkSync(inputFile);
-                video = _.omit(video, 'promotion','meta');
+                video = _.omit(video, ['promotion','meta']);
                 video = _.extend(video, {filename: outputFile});
                 cb(null, video);
             }

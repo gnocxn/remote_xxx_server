@@ -125,8 +125,7 @@ vantage
                 if (video) {
                     xvideos.UPLOAD2(video, cookie, function (err, data) {
                         //console.log(err, data);
-                        /*video = _.extend(video, {editLink: data});
-                        callback();*/
+                        video = _.extend(video, {editLink: data});
 	                    callback();
                     });
                 } else {
