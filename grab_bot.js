@@ -228,7 +228,7 @@ module.exports = {
         var fileTpl = _.template("file '<%=filename%>'\n");
         var cmdTpl = _.template("ffmpeg -f concat -i <%=input%> -c copy <%=output%>");
         var files = [video.promotion, video.filename];
-        if(video.meta && (video.meta.promotionDuration && video.meta.promotionDuration < 15)){
+        if(video.meta && (video.meta.promotionDuration && video.meta.promotionDuration <= 5)){
             files = files.reverse();
         }
         _.each(files, function (file) {
@@ -251,30 +251,6 @@ module.exports = {
             /*if (error !== null) {
              console.log('exec error: ' + error);
              }*/
-        });
-    },
-    SIMPLE_MERGE2: function (video, cb) {
-        var outputFile = path.join(path.resolve(defautlDIR), getFilename(video.title, 'final'));
-        var cmdTpl = _.template("ffmpeg <%=input%> -filter_complex '[0:v] [0:a:0] [1:v] [1:a:0] concat=n=2:v=1:a=1 [v] [a]' -map '[v]' -map '[a]' <%=output%>");
-        var files = [video.promotion, video.filename];
-        var input = '';
-        _.each(files, function (file) {
-            input += '-i ' + file + ' ';
-        });
-        var cmd = cmdTpl({input: input, output: outputFile});
-        console.log(cmd);
-        throw new Error('');
-
-        exec(cmd, {maxBuffer: 1024 * 500}, function (error, stdout, stderr) {
-            if (stderr || stdout) {
-                console.log('files have been merged succesfully');
-                fs.unlinkSync(video.filename);
-                fs.unlinkSync(video.promotion);
-                //fs.unlinkSync(inputFile);
-                video = _.omit(video, 'promotion');
-                video = _.extend(video, {filename: outputFile});
-                cb(null, video);
-            }
         });
     }
 }

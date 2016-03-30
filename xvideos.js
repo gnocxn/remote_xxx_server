@@ -430,19 +430,26 @@ module.exports = {
 							console.log(msg.Error(e));
 						} else {
 							var comit = r.headers['location'];
+							//console.log(comit);
 							var comitUrl = 'http://upload.xvideos.com';
 							if (!comit) {
+                                //console.log(b);
 								var x = Xray();
 								x(b, {
 									success: 'p.inlineOK a@href',
 									error: 'p.inlineError'
 								})(function (error, data) {
-									comitUrl+=data.success;
+                                    if(data.error){
+                                        //console.log(msg.Error(data.error));
+                                        cb2(data.error, null);
+                                    }else{
+                                        comitUrl+=data.success;
 
-									cb2(error, {
-										comitUrl:comitUrl,
-										cookies : r.cookies
-									});
+                                        cb2(error, {
+                                            comitUrl:comitUrl,
+                                            cookies : r.cookies
+                                        });
+                                    }
 								})
 							}else{
 								cb2(null, {
