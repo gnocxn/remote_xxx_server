@@ -101,6 +101,7 @@ module.exports = {
         })
     },
     TUBECUP : function(link, cb){
+
         var x = Xray();
 	    x(link,{
 		    title : '.video-info__title h1@text',
