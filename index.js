@@ -27,7 +27,11 @@ vantage
                     {
                         reg: /xhamster.com/,
                         index: 1
-                    }
+                    },
+	                {
+		                reg: /txxx.com/,
+		                index: 2
+	                }
                 ]
                 var site = _.find(sites, function (site) {
                     return site.reg.test(link)
@@ -39,6 +43,9 @@ vantage
                     case 1:
                         grab.XHAMSTER(link, cb);
                         break;
+                    case 2:
+		                grab.TUBECUP(link,cb);
+		                break;
                 }
             }
 

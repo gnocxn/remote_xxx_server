@@ -86,19 +86,44 @@ module.exports = {
         })
         (function (err, data) {
             if (err) {
-                cbXray(err, null);
+	            cb(err, null);
             }
             if (data) {
                 var stream = data.script.match(/file: \'(.*)\'\,/)[1];
                 var xvideos_tags = _.chain(data.tags).map(function (t) {
                     return _.words(t.toLowerCase()).join('-')
-                }).values().join(' ');
-                console.log('Get Info Successfully');
-                var video = _.extend(data, {source: 'xhamster', stream: stream, xvideos_tags: xvideos_tags})
-                video = _.omit(video, 'script');
-                cb(null, video);
+                }).value().join(' ');
+	            console.log('Get Info Successfully');
+	            var video = _.extend(data, {source: 'xhamster', stream: stream, xvideos_tags: xvideos_tags})
+	            video = _.omit(video, 'script');
+	            cb(null, video);
             }
         })
+    },
+    TUBECUP : function(link, cb){
+        var x = Xray();
+	    x(link,{
+		    title : '.video-info__title h1@text',
+		    description : 'meta[name="description"]@content',
+		    id : 'input[name="video_id"]@value',
+		    tags : 'meta[name="keywords"]@content',
+		    script : '.player script@html'
+	    })(function(err, data){
+		    if (err) {
+			    cb(err, null);
+		    }
+		    if(data){
+			    var stream = data.script.match(/\'file\' \: \'(.*)\'/)[1];
+			    var xvideos_tags = _.chain(data.tags).split(',').map(function(t){
+				    return _.words(t.toLowerCase()).join('-')
+			    }).uniq().value().join(' ')
+			    var description = data.description.replace('Porn Tube Cup video.','');
+			    console.log('Get Info Successfully');
+			    var video = _.extend(data, {source: 'tubecup', stream: stream, xvideos_tags: xvideos_tags, description : description});
+			    video = _.omit(video, ['script', 'tags']);
+			    cb(null, video)
+		    }
+	    })
     },
     DOWNLOAD: function (video, cb) {
         if (!video) return;
