@@ -159,44 +159,6 @@ module.exports = {
 						});
 					}, 1000)
 
-					/*function progress(done) {
-					 if (done == 1) {
-					 return;
-					 }
-					 var options = {
-					 url : progressUrl,
-					 headers: {
-					 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.75 Safari/537.36 OPR/36.0.2130.32',
-					 'Cookie': cookie
-					 }
-					 }
-
-					 request.get(options, function (e, r) {
-					 if (e) {
-					 console.log(msg.Error(e.toString()));
-					 }
-					 if (r.statusCode == 200) {
-					 var done = 0;
-					 //if(b !== '[]')
-					 var obj = JSON.parse(r.body);
-					 //console.log(obj, _.isArray(obj));
-					 if (!_.isArray(obj)) {
-					 var current = pretty(obj.current, true, true);
-					 var total = pretty(obj.total, true, true);
-					 var str = 'Uploaded... ' + current + '/' + total;
-					 done = obj.done;
-					 process.stdout.clearLine();
-					 process.stdout.cursorTo(0);
-					 process.stdout.write(msg.Warning(str));
-					 }
-					 progress(done);
-					 }
-					 });
-					 }
-
-					 progress(0);*/
-
-
 				}
 
 			},
@@ -252,13 +214,6 @@ module.exports = {
 									}
 									var status = data.status || data.inlineError;
 									waitForComit(status);
-									/*if (data.status === 'Uploaded video saved !') {
-									 console.log('\n' + msg.Success(data.status));
-									 var xvideoUrlEdit = 'http://upload.xvideos.com' + data.editLink;
-									 cb3(null, _.extend(data, {cookie: cookie, editLink: xvideoUrlEdit}));
-									 } else {
-									 cb3(null, null);
-									 }*/
 								}
 							})
 						}
@@ -353,191 +308,199 @@ module.exports = {
 	},
 	UPLOAD2: function (video, cookies, cb) {
 		var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
-		//var cookie = login_cookie || cookies;
-		async.waterfall([
-			function (cb1) {
-				var uploadUrl = 'http://upload.xvideos.com/account/uploads/new';
-				var headers = {
-					cookies: cookies
-				}
-				needle.get(uploadUrl, headers, function (e, r, b) {
-					var x = Xray();
-					cookies = r.cookies;
-					x(b, '#progress_key@value')(function (error, data) {
-						cb1(error, {
-							cookies: cookies,
-							APC_UPLOAD_PROGRESS: data
-						});
-					})
-				})
-			},
-			function (obj, cb2) {
-				if (!obj.APC_UPLOAD_PROGRESS) {
-					cb2(null, null)
-				} else {
-					var progressTlp = _.template('http://upload.xvideos.com/account/uploads/progress?upload_id=<%=progressId%>&basic_upload=1')
-					var progressUrl = progressTlp({progressId: obj.APC_UPLOAD_PROGRESS});
+        try{
+            async.waterfall([
+                function (cb1) {
+                    var uploadUrl = 'http://upload.xvideos.com/account/uploads/new';
+                    var headers = {
+                        cookies: cookies
+                    }
+                    needle.get(uploadUrl, headers, function (e, r, b) {
+                        var x = Xray();
+                        cookies = r.cookies;
+                        x(b, '#progress_key@value')(function (error, data) {
+                            cb1(error, {
+                                cookies: cookies,
+                                APC_UPLOAD_PROGRESS: data
+                            });
+                        })
+                    })
+                },
+                function (obj, cb2) {
+                    if (!obj.APC_UPLOAD_PROGRESS) {
+                        cb2(null, null)
+                    } else {
+                        var progressTlp = _.template('http://upload.xvideos.com/account/uploads/progress?upload_id=<%=progressId%>&basic_upload=1')
+                        var progressUrl = progressTlp({progressId: obj.APC_UPLOAD_PROGRESS});
 
-					function progress(done) {
-						if (done == 1) {
-							return;
-						}
-						var headers = {
-							cookies: obj.cookies
-						}
+                        function progress(done) {
+                            if (done == 1) {
+                                return;
+                            }
+                            var headers = {
+                                cookies: obj.cookies
+                            }
 
-						needle.get(progressUrl, headers, function (e, r, b) {
-							if (e) {
-								console.log(msg.Error(e.toString()));
-							}
-							if (r.statusCode == 200) {
-								var done = 0;
-								//if(b !== '[]')
-								var obj = JSON.parse(r.body);
-								//console.log(obj, _.isArray(obj));
-								if (!_.isArray(obj)) {
-									var current = pretty(obj.current, true, true);
-									var total = pretty(obj.total, true, true);
-									var str = 'Uploaded... ' + current + '/' + total;
-									done = obj.done;
-									process.stdout.clearLine();
-									process.stdout.cursorTo(0);
-									process.stdout.write(msg.Warning(str));
-								}
-								progress(done);
-							}
-						});
-					}
-
-					var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
-					var options = {
-						cookies: obj.cookies,
-						open_timeout: 0,
-						read_timeout: 0,
-						multipart: true
-					}
-					var data = {
-						APC_UPLOAD_PROGRESS: obj.APC_UPLOAD_PROGRESS,
-						message: '',
-						tags: video.xvideos_tags,
-						upload_file: {
-							file: video.filename,
-							content_type: 'video/mp4'
-						}
-					}
-					needle.post(submitAction, data, options, function (e, r, b) {
-						if (e) {
-							console.log(msg.Error(e));
-						} else {
-							var comit = r.headers['location'];
-							//console.log(comit);
-							var comitUrl = 'http://upload.xvideos.com';
-							if (!comit) {
-                                //console.log(b);
-								var x = Xray();
-								x(b, {
-									success: 'p.inlineOK a@href',
-									error: 'p.inlineError'
-								})(function (error, data) {
-                                    if(data.error){
-                                        //console.log(msg.Error(data.error));
-                                        cb2(data.error, null);
-                                    }else{
-                                        comitUrl+=data.success;
-
-                                        cb2(error, {
-                                            comitUrl:comitUrl,
-                                            cookies : r.cookies
-                                        });
+                            needle.get(progressUrl, headers, function (e, r, b) {
+                                if (e) {
+                                    console.log(msg.Error(e.toString()));
+                                }
+                                if (r.statusCode == 200) {
+                                    var done = 0;
+                                    //if(b !== '[]')
+                                    var obj = JSON.parse(r.body);
+                                    //console.log(obj, _.isArray(obj));
+                                    if (!_.isArray(obj)) {
+                                        var current = pretty(obj.current, true, true);
+                                        var total = pretty(obj.total, true, true);
+                                        var str = 'Uploaded... ' + current + '/' + total;
+                                        done = obj.done;
+                                        process.stdout.clearLine();
+                                        process.stdout.cursorTo(0);
+                                        process.stdout.write(msg.Warning(str));
                                     }
-								})
-							}else{
-								cb2(null, {
-									comitUrl: comitUrl + comit,
-									cookies: r.cookies
-								})
-							}
+                                    progress(done);
+                                }
+                            });
+                        }
 
-						}
-					});
+                        var submitAction = 'http://upload.xvideos.com/account/uploads/submit?video_type=other';
+                        var options = {
+                            cookies: obj.cookies,
+                            open_timeout: 0,
+                            read_timeout: 0,
+                            multipart: true
+                        }
+                        var data = {
+                            APC_UPLOAD_PROGRESS: obj.APC_UPLOAD_PROGRESS,
+                            message: '',
+                            tags: video.xvideos_tags,
+                            upload_file: {
+                                file: video.filename,
+                                content_type: 'video/mp4'
+                            }
+                        }
+                        needle.post(submitAction, data, options, function (e, r, b) {
+                            if (e) {
+                                console.log(msg.Error(e));
+                            } else {
+                                var comit = r.headers['location'];
+                                //console.log(comit);
+                                var comitUrl = 'http://upload.xvideos.com';
+                                if (!comit) {
+                                    //console.log(b);
+                                    var x = Xray();
+                                    x(b, {
+                                        success: 'p.inlineOK a@href',
+                                        error: 'p.inlineError'
+                                    })(function (error, data) {
+                                        if(data.error){
+                                            //console.log(msg.Error(data.error));
+                                            cb2(data.error, null);
+                                        }else{
+                                            comitUrl+=data.success;
+
+                                            cb2(error, {
+                                                comitUrl:comitUrl,
+                                                cookies : r.cookies
+                                            });
+                                        }
+                                    })
+                                }else{
+                                    cb2(null, {
+                                        comitUrl: comitUrl + comit,
+                                        cookies: r.cookies
+                                    })
+                                }
+
+                            }
+                        });
 
 
-					progress(0);
-				}
-			},
-			function (obj, cb3) {
-				if (!obj.comitUrl) cb3(null, null);
-				var headers = {
-					cookies: obj.cookies
-				}
-				needle.get(obj.comitUrl, headers, function (e, r, b) {
-					if (e) {
-						console.log(msg.Error(e));
-					} else {
-						var x = Xray();
-						x(b, {
-							status: 'span.ok@text',
-							editLink: 'a[target="_top"]@href',
-							inlineError: 'p.inlineError'
-						})(function (error, data) {
-							if (data.status) {
-								console.log('\n'+msg.Success(data.status));
-								var urlEdit = 'http://upload.xvideos.com' + data.editLink;
-								cb3(null, {
-									cookies: r.cookies,
-									urlEdit: urlEdit
-								})
-							}
-						})
-					}
-				})
-			},
-			function (obj, cb4) {
-				if (!obj.urlEdit) cb4(null, null);
-				var headers = {
-					cookies: obj.cookies
-				}
-				var data = {
-					update_video_information: 'Update information',
-					hide: 2,
-					title: video.title,
-					keywords: video.xvideos_tags,
-					description: video.description || ''
-				}
-				needle.post(obj.urlEdit, data, headers, function (e, r, b) {
-					if (e) {
-						console.log(msg.Error(e));
-					} else {
-						var result = r.headers['location'];
-						console.log(result);
-						cb4(null, {
-							cookies: r.cookies,
-							editLink: obj.urlEdit,
-							msgLink: result
-						})
-					}
-				})
-			},
-			function (obj, cb5) {
-				if (!obj.msgLink || !obj.editLink) cb5(null, null);
-				needle.get(obj.msgLink, {cookies: obj.cookies}, function (e, r, b) {
-					var x = Xray();
-					x(b, 'p.inlineOK')(function (error, data) {
-						console.log(msg.Success(data));
-					});
-					cb5(null, obj.editLink);
-				})
-			}
-		], function (error, result) {
-			if (error) {
-				console.log(msg.Error(error))
-			} else {
-				if (result) {
-					console.log(msg.Warning(result));
-				}
-				console.log(msg.Success('Done!!!'));
-				cb(null, result);
-			}
-		})
+                        progress(0);
+                    }
+                },
+                function (obj, cb3) {
+                    if (!obj.comitUrl) cb3(null, null);
+                    var headers = {
+                        cookies: obj.cookies
+                    }
+                    needle.get(obj.comitUrl, headers, function (e, r, b) {
+                        if (e) {
+                            console.log(msg.Error(e));
+                        } else {
+                            var x = Xray();
+                            x(b, {
+                                status: 'span.ok@text',
+                                editLink: 'a[target="_top"]@href',
+                                inlineError: 'p.inlineError'
+                            })(function (error, data) {
+                                if (data.status) {
+                                    console.log('\n'+msg.Success(data.status));
+                                    var urlEdit = 'http://upload.xvideos.com' + data.editLink;
+                                    cb3(null, {
+                                        cookies: r.cookies,
+                                        urlEdit: urlEdit
+                                    })
+                                }
+                            })
+                        }
+                    })
+                },
+                function (obj, cb4) {
+                    if (!obj.urlEdit) cb4(null, null);
+                    var headers = {
+                        cookies: obj.cookies
+                    }
+                    var data = {
+                        update_video_information: 'Update information',
+                        hide: 2,
+                        title: video.title,
+                        keywords: video.xvideos_tags,
+                        description: video.description || ''
+                    }
+                    needle.post(obj.urlEdit, data, headers, function (e, r, b) {
+                        if (e) {
+                            console.log(msg.Error(e));
+                        } else {
+                            var result = r.headers['location'];
+                            console.log(result);
+                            cb4(null, {
+                                cookies: r.cookies,
+                                editLink: obj.urlEdit,
+                                msgLink: result
+                            })
+                        }
+                    })
+                },
+                function (obj, cb5) {
+                    if (!obj.msgLink || !obj.editLink || obj.msgLink === undefined){
+                        cb5(null, null);
+                    }else{
+                        needle.get(obj.msgLink, {cookies: obj.cookies}, function (e, r, b) {
+                            var x = Xray();
+                            x(b, 'p.inlineOK')(function (error, data) {
+                                console.log(msg.Success(data));
+                            });
+                            cb5(null, obj.editLink);
+                        })
+                    }
+                }
+            ], function (error, result) {
+                if (error) {
+                    console.log(msg.Error(error))
+                } else {
+                    if (result) {
+                        console.log(msg.Warning(result));
+                    }
+                    console.log(msg.Success('Done!!!'));
+                    cb(null, result);
+                }
+            })
+        }catch(ex){
+            cb(null,null)
+        }
+		//var cookie = login_cookie || cookies;
+
 	}
 }

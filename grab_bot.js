@@ -15,7 +15,8 @@ var promotionImage = path.join(path.resolve('./'), 'promotion.png');
 var promotionSound = path.join(path.resolve('./'), 'promotion.mp3');
 
 var exec = require('child_process').exec;
-
+var spawn = require('child_process').spawn;
+var spawnargs = require('spawn-args');
 
 module.exports = {
     PORNCOM: function (link, cb) {
@@ -86,20 +87,72 @@ module.exports = {
         })
         (function (err, data) {
             if (err) {
-                cbXray(err, null);
+	            cb(err, null);
             }
             if (data) {
                 var stream = data.script.match(/file: \'(.*)\'\,/)[1];
                 var xvideos_tags = _.chain(data.tags).map(function (t) {
                     return _.words(t.toLowerCase()).join('-')
-                }).values().join(' ');
-                console.log('Get Info Successfully');
-                var video = _.extend(data, {source: 'xhamster', stream: stream, xvideos_tags: xvideos_tags})
-                video = _.omit(video, 'script');
-                cb(null, video);
+                }).value().join(' ');
+	            console.log('Get Info Successfully');
+	            var video = _.extend(data, {source: 'xhamster', stream: stream, xvideos_tags: xvideos_tags})
+	            video = _.omit(video, 'script');
+	            cb(null, video);
             }
         })
     },
+    TUBECUP : function(link, cb){
+        async.waterfall([
+                function(cb1){
+                    var x = Xray();
+                    x(link,{
+                        title : '.video-info__title h1@text',
+                        description : 'meta[name="description"]@content',
+                        id : 'input[name="video_id"]@value',
+                        tags : 'meta[name="keywords"]@content',
+                        script : '.player script@html'
+                    })(function(err, data){
+                        if (err) {
+                            cb(err, null);
+                        }
+                        if(data){
+                            var stream = data.script.match(/\'file\' \: \'(.*)\'/)[1];
+                            var xvideos_tags = _.chain(data.tags).split(',').map(function(t){
+                                return _.words(t.toLowerCase()).join('-')
+                            }).uniq().value().join(' ')
+                            var description = data.description.replace('Porn Tube Cup video.','');
+                            console.log('Get Info Successfully');
+                            var video = _.extend(data, {source: 'tubecup', stream: stream, xvideos_tags: xvideos_tags, description : description});
+                            video = _.omit(video, ['script', 'tags']);
+                            cb1(null, video)
+                        }
+                    })
+                },
+                function(video, cb2){
+                    var isGetMoreTags = false;
+                    if(video.xvideos_tags.indexOf('tube-cup') !== -1) isGetMoreTags = true;
+                    if(video.xvideos_tags.split(' ').length <=1) isGetMoreTags = true;
+
+                    if(isGetMoreTags){
+                        var relatedTagsApi = 'http://st.tubecup.org/releted_tc/json.php?page=1&id='+video.id;
+                        request(relatedTagsApi,function(error, response, body){
+                            if (!error && response.statusCode == 200) {
+                                var info = JSON.parse(body);
+                                var tags = _.chain(info).map(function(i){return i.cats_str.split(',')}).flatten().uniq().map(function(t){return _.words(t.trim()).join('-')}).flatten().value().join(' ');
+                                cb2(null, _.extend(video,{xvideos_tags : tags}))
+                            }
+                        })
+                    }else{
+                        cb2(null, video);
+                    }
+                }
+            ],
+            function(error, result){
+                cb(error, result);
+            }
+        )
+    },
+
     DOWNLOAD: function (video, cb) {
         if (!video) return;
         try {
@@ -125,6 +178,29 @@ module.exports = {
             throw new ex;
         }
     },
+    DOWNLOAD_AXEL: function (video, cb) {
+        if (!video) return;
+        var filename = path.join(path.resolve(defautlDIR), getFilename(video.title, 'downloaded'));
+        var downloader = spawn('axel',[video.stream,'-o',filename]);
+        downloader.stdout.on('data',function(data){
+            process.stdout.clearLine();
+            process.stdout.write(data.toString('utf8'));
+        });
+
+        downloader.stdout.on('end', function() {
+            console.log('Download successfully');
+            video = _.omit(video, 'stream');
+            video = _.extend(video, {filename: filename});
+            cb(null, video);
+        });
+
+
+        downloader.on('exit', function(code) {
+            if (code != 0) {
+                console.log('Failed: ' + code);
+            }
+        });
+    },
     GET_METADATA: function (video, cb) {
         new ffmpeg.ffprobe(video.filename, function (error, data) {
             if (error) cb(error, null);
@@ -144,7 +220,7 @@ module.exports = {
             if (minute <= 5) loopSecond = 5;
             if (minute > 5 && minute <= 10) loopSecond = 10;
             if (minute > 10) loopSecond = 15;
-            video = _.extend(video.meta, {promotionDuration : loopSecond});
+            video = _.extend(video.meta, {promotionDuration : loopSecond*2});
         }
         new ffmpeg(promotionImage)
             .loop(loopSecond)
@@ -190,6 +266,21 @@ module.exports = {
                 .run()
         }
     },
+    SIMPLE_RESIZE : function(video, cb){
+        if (video && video.filename) {
+            var size = '640:480';
+            var outputFile = path.join(path.resolve(defautlDIR), getFilename(video.title, 'resized'));
+            var cmdTlp = _.template('ffmpeg -i <%=input%> -vf scale=<%=size%> <%=output%>'),
+                cmd = cmdTlp({input : video.filename, size : size, output: outputFile});
+            exec(cmd, {maxBuffer: 1024 * 500}, function (error, stdout, stderr) {
+                if (stderr || stdout) {
+                    console.log('\nResize succesfully');
+                    fs.unlinkSync(video.filename);
+                    cb(null, _.extend(video, {filename: outputFile}));
+                }
+            })
+        }
+    },
     ADD_PROMOTION: function (video, cb) {
         if (video && video.filename && video.promotion) {
             var outputFile = path.join(path.resolve(defautlDIR), getFilename(video.title, 'final'));
@@ -199,13 +290,6 @@ module.exports = {
                     console.log('files have been merged succesfully');
                     fs.unlinkSync(video.filename);
                     fs.unlinkSync(video.promotion);
-                    /*                    var _categories = _.chain(video.categories).map(function (t) {
-                     return _.words(t.toLowerCase()).join('-')
-                     }).value();
-                     var _tags = _.chain(video.tags).map(function (t) {
-                     return _.words(t.toLowerCase()).join('-')
-                     }).value();
-                     var xvideos_tags = _.uniq(_.union(_categories, _tags)).join(' ');*/
                     video = _.omit(video, 'promotion');
                     video = _.extend(video, {filename: outputFile});
                     cb(null, video);
@@ -228,9 +312,9 @@ module.exports = {
         var fileTpl = _.template("file '<%=filename%>'\n");
         var cmdTpl = _.template("ffmpeg -f concat -i <%=input%> -c copy <%=output%>");
         var files = [video.promotion, video.filename];
-        if(video.meta && (video.meta.promotionDuration && video.meta.promotionDuration <= 5)){
-            files = files.reverse();
-        }
+        /*if(video.meta && (video.meta.promotionDuration && video.meta.promotionDuration <= 5)){
+            files = [video.filename,video.promotion];
+        }*/
         _.each(files, function (file) {
             var str = fileTpl({filename: file});
             fs.appendFileSync(inputFile, str);
@@ -245,7 +329,7 @@ module.exports = {
                 fs.unlinkSync(video.promotion);
                 fs.unlinkSync(inputFile);
                 video = _.omit(video, ['promotion','meta']);
-                video = _.extend(video, {filename: outputFile});
+                video = _.extend(video, {filename: outputFile, isReadyToUpload : 1});
                 cb(null, video);
             }
             /*if (error !== null) {
@@ -255,9 +339,9 @@ module.exports = {
     }
 }
 
-function getFilename(title, prefix) {
+function getFilename(title, prefix, joinStr) {
     var prefix = (prefix) ? '_' + prefix.toUpperCase() : '';
-    var filename = _.chain(title).lowerCase().words().join('-').value();
+    var filename = _.chain(title).lowerCase().words().join(joinStr || '-').value();
     filename += '-' + hat() + prefix + '.mp4';
     return filename;
 }

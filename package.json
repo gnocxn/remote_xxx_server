@@ -15,6 +15,7 @@
     "fluent-ffmpeg": "^2.0.1",
     "fs": "0.0.2",
     "hat": "0.0.3",
+    "line-by-line": "^0.1.4",
     "lodash": "^4.6.1",
     "lowdb": "^0.12.5",
     "needle": "^1.0.0",
@@ -22,6 +23,7 @@
     "prettysize": "0.0.3",
     "request": "^2.69.0",
     "request-progress": "^2.0.1",
+    "spawn-args": "^0.1.0",
     "uuid": "^2.0.1",
     "vantage": "^1.5.2",
     "x-ray": "^2.0.3"

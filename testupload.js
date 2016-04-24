@@ -17,7 +17,7 @@ var headers = {
     'Cookie': cookie
 }
 
-const low = require('lowdb')
+/*const low = require('lowdb')
 const storage = require('lowdb/file-sync')
 const db = low('db.json', {storage});
 
@@ -25,8 +25,35 @@ var video = db('videos').find({id : '1924709'});
 if(video){
     filename = video.filename;
     tags = video.xvideos_tags;
-}
+}*/
 
 //console.log(video)
+var x = Xray();
+x('http://www.txxx.com/videos/249622/cute-teen-fingers-her-pussy-slowly/',{
+    title : '.video-info__title h1@text',
+	description : 'meta[name="description"]@content',
+    id : 'input[name="video_id"]@value',
+    tags : 'meta[name="keywords"]@content',
+    script : '.player script@html'
+})(function(err, data){
+    if (err) {
+        cb(err, null);
+    }
+    if(data){
+        try{
+	        var stream = data.script.match(/\'file\' \: \'(.*)\'/)[1];
+	        var xvideos_tags = _.chain(data.tags).split(',').map(function(t){
+		        return _.words(t.toLowerCase()).join('-')
+	        }).uniq().value().join(' ')
+	        var description = data.description.replace('Porn Tube Cup video.','');
+	        console.log('Get Info Successfully');
+	        var video = _.extend(data, {source: 'tubecup', stream: stream, xvideos_tags: xvideos_tags, description : description});
+	        video = _.omit(video, ['script', 'tags']);
+	        cb(null, video)
+        }catch(ex){
+	        console.log('Ex',ex);
+        }
+    }
+})
 
 
