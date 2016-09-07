@@ -4,7 +4,9 @@ var hat = require('hat');
 var path = require('path');
 var _ = require('lodash');
 var pretty = require('prettysize');
+var gm = require('gm');
 
+/*
 var inputFile = path.join('/tmp/','134446_hq.mp4');
 var outputFile = path.join('/tmp/', hat() + 'OOOO_RESIZED.mp4');
 var stream = 'http://www.txxx.com/get_file/4/1df5e595b9c2b377a62397e5826b3bf8/134000/134173/134173_hq.mp4/?br=556';
@@ -35,3 +37,8 @@ downloader.on('exit', function(code) {
     }
 });
 
+*/
+
+gm('/tmp/watermark000.png').size(function(err,value){
+    console.log(value);
+})

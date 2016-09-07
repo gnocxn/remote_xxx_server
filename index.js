@@ -19,11 +19,11 @@ const upload = async.queue(function(t, cb){
     vantage.exec(cmd).then(function(data){
         cb();
     })
-},2);
+},1);
 
 const low = require('lowdb')
 const storage = require('lowdb/file-sync')
-const db = low('db.json', {storage: storage});
+const db = low('db1.json', {storage: storage});
 
 vantage
     .command("downloads <file>")
@@ -68,7 +68,7 @@ vantage
     .command("download <link>")
     .description("Grab link at porn.com, xhamster.com...")
     .action(function (args, callback) {
-        //console.log(args)
+        console.log(args)
         try {
             var link = args.link;
 
@@ -111,7 +111,16 @@ vantage
                 function (video, cb2) {
                     grab.DOWNLOAD_AXEL(video, cb2);
                 },
-                function (video, cb2_1) {
+	            //function (video, cb2_1) {
+		         //   grab.GET_METADATA(video, cb2_1);
+	            //},
+	            //function (video, cb2_2) {
+		         //   grab.CREATE_WATERMARK(video, cb2_2);
+	            //},
+	            //function (video, cb3) {
+		         //   grab.ADD_WATERMARK(video, cb3);
+	            //}
+/*                function (video, cb2_1) {
                     grab.GET_METADATA(video, cb2_1);
                 },
                 function (video, cb34) {
@@ -132,7 +141,7 @@ vantage
                 function (video, cb5) {
                     //grab.ADD_PROMOTION(video, cb5);
                     grab.SIMPLE_MERGE(video, cb5);
-                }
+                }*/
             ], function (error, result) {
                 //console.log(result);
                 var video = db('videos').find({id: result.id});
@@ -226,7 +235,7 @@ vantage
                 })
             } else if (args.options.upload) {
                 var videoId = args.options.upload;
-                var defaultUser = 'cafe4taipei@gmail.com';
+                var defaultUser = 'nhung.pth@sunrise.edu.vn';
                 var user = db('users').find({username: defaultUser});
                 var cookie = JSON.parse(user.cookie);
                 var video = db('videos').find({id: videoId.toString()});

@@ -454,7 +454,7 @@ module.exports = {
                     }
                     var data = {
                         update_video_information: 'Update information',
-                        hide: 2,
+                        hide: 1,
                         title: video.title,
                         keywords: video.xvideos_tags,
                         description: video.description || ''
